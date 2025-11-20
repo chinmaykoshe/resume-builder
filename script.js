@@ -28,6 +28,43 @@ function toggleCollapse(element) {
     }
 }
 
+// Place this near the top of your script.js, before any function uses it!
+function renumberItems(containerId, prefix) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const items = container.querySelectorAll('.repeatable-item');
+    items.forEach((item, index) => {
+        const number = index + 1;
+        const oldId = item.id;
+        // Get section type from id, e.g. 'education-1'
+        const type = oldId.split('-')[0];
+        const newId = `${type}-${number}`;
+        item.id = newId;
+
+        // Update number shown in header
+        const headerText = item.querySelector('.item-number');
+        if (headerText) headerText.textContent = `${prefix} ${number}`;
+
+        // Update data-id on inner fields
+        item.querySelectorAll('[data-id]').forEach(el => el.setAttribute('data-id', number));
+
+        // Update checkbox id and label for="..."
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        if (checkbox) {
+            const checkboxId = `${type}-current-${number}`;
+            checkbox.id = checkboxId;
+            const label = item.querySelector(`label[for^="${type}-current"]`);
+            if (label) label.setAttribute('for', checkboxId);
+        }
+
+        // Update delete button onclick for new id
+        const deleteBtn = item.querySelector('.btn-icon-delete');
+        if (deleteBtn) {
+            deleteBtn.setAttribute('onclick', `event.stopPropagation(); removeSection('${newId}');`);
+        }
+    });
+}
+
 function collapseAllExcept(containerId, currentId) {
     const container = document.getElementById(containerId);
     if (container) {
@@ -234,49 +271,6 @@ function loadDummyData() {
 
         renumberItems('experienceContainer', 'Experience'); // RENUMBER AFTER ADDING
     }
-
-    function renumberItems(containerId, prefix) {
-        const container = document.getElementById(containerId);
-        if (!container) return;
-        const items = container.querySelectorAll('.repeatable-item');
-        items.forEach((item, index) => {
-            const number = index + 1;
-            const oldId = item.id;
-            const type = oldId.split('-')[0]; // <---- This initializes type locally
-            const newId = `${type}-${number}`;
-            item.id = newId;
-
-            // Update header text and other IDs
-            const headerText = item.querySelector('.item-number');
-            if (headerText) {
-                // More robust header logic here...
-                headerText.textContent = `${prefix} ${number}`;
-            }
-
-            // Update data-id attributes for all inner fields
-            item.querySelectorAll('[data-id]').forEach(el => {
-                el.setAttribute('data-id', number);
-            });
-
-            // Update checkbox and label IDs (if present)
-            const checkbox = item.querySelector('input[type="checkbox"]');
-            if (checkbox) {
-                const checkboxId = `${type}-current-${number}`;
-                checkbox.id = checkboxId;
-                const label = item.querySelector(`label[for*="${type}-current"]`);
-                if (label) {
-                    label.setAttribute('for', checkboxId);
-                }
-            }
-
-            // Update the delete button
-            const deleteBtn = item.querySelector('.btn-icon-delete');
-            if (deleteBtn) {
-                deleteBtn.setAttribute('onclick', `event.stopPropagation(); removeSection('${newId}')`);
-            }
-        });
-    }
-
 
     function addEducation() {
         educationCount++;
@@ -1069,17 +1063,16 @@ function makeDraggable(element) {
         }, { passive: true });
     });
 }
-
 function handleDragOver(e) {
     e.preventDefault();
     const container = e.currentTarget;
     const afterElement = getDragAfterElement(container, e.clientY);
     const dragging = document.querySelector('.dragging');
-
-    if (afterElement == null) {
-        container.appendChild(dragging);
-    } else {
+    if (!dragging) return;
+    if (afterElement && afterElement instanceof Node) {
         container.insertBefore(dragging, afterElement);
+    } else if (dragging instanceof Node) {
+        container.appendChild(dragging);
     }
 }
 
@@ -2693,60 +2686,125 @@ function toggleExportMenu(event) {
 
     menu.classList.toggle('active');
 }
+
 async function exportAsPDF() {
-  try {
-    const resumeElement = document.getElementById('resumePreview');
-    const data = collectData();
-    const fileName = data.fullName.replace(/\s/g, "_") + "_Resume.pdf";
-    const clone = resumeElement.cloneNode(true);
-    const container = document.createElement("div");
-    container.style.position = "absolute";
-    container.style.left = "-9999px";
-    container.style.width = "850px";
-    container.appendChild(clone);
-    document.body.appendChild(container);
+    try {
+        const resumeElement = document.getElementById('resumePreview');
+        const data = collectData();
+        const fileName = data.fullName.replace(/\s/g, "_") + "_Resume.pdf";
+        const clone = resumeElement.cloneNode(true);
+        const container = document.createElement("div");
+        container.style.position = "absolute";
+        container.style.left = "-9999px";
+        container.style.width = "850px";
+        container.appendChild(clone);
+        document.body.appendChild(container);
 
-    const opt = {
-      margin: 0,
-      filename: fileName,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-    };
+        // Add a compressed style class
+        const style = document.createElement('style');
+        style.textContent = `
+      .pdf-export-compressed * {
+        padding: 0.2em 0.4em !important;
+        margin: 0.15em 0 !important;
+        line-height: 1.3 !important;
+      }
+      .pdf-export-compressed h1 {
+        margin: 0.2em 0 0.25em 0 !important;
+        padding: 0 !important;
+        font-size: 1.75em !important;
+      }
+      .pdf-export-compressed h2 {
+        margin: 0.3em 0 0.2em 0 !important;
+        padding: 0 !important;
+        font-size: 1.25em !important;
+      }
+      .pdf-export-compressed h3 {
+        margin: 0.25em 0 0.15em 0 !important;
+        padding: 0 !important;
+      }
+      .pdf-export-compressed p {
+        margin: 0.15em 0 !important;
+        padding: 0 !important;
+      }
+      .pdf-export-compressed ul, 
+      .pdf-export-compressed ol {
+        margin: 0.2em 0 !important;
+        padding-left: 1em !important;
+      }
+      .pdf-export-compressed li {
+        margin: 0.1em 0 !important;
+      }
+      .pdf-export-compressed section,
+      .pdf-export-compressed .section,
+      .pdf-export-compressed .resume-section {
+        margin: 0.3em 0 !important;
+        padding: 0.3em 0 !important;
+      }
+    `;
+        clone.appendChild(style);
+        clone.classList.add('pdf-export-compressed');
 
-    await html2pdf().set(opt).from(clone).save();
+        // Wait for styles to apply
+        await new Promise(resolve => setTimeout(resolve, 100));
 
-    document.body.removeChild(container);
-    document.querySelectorAll('.export-menu').forEach(menu => menu.classList.remove('active'));
-    showNotification("PDF exported successfully!", "success");
-  } catch (error) {
-    console.error("Error exporting PDF", error);
-    showNotification("Error exporting PDF. Please try again.", "error");
-  }
+        const contentHeight = clone.offsetHeight;
+        const contentWidth = 850;
+        const pdfWidth = 210;
+        const pdfHeight = (contentHeight * pdfWidth) / contentWidth;
+
+        const opt = {
+            margin: [3, 3, 3, 3],
+            filename: fileName,
+            image: { type: "jpeg", quality: 0.98 },
+            html2canvas: {
+                scale: 2,
+                useCORS: true,
+                letterRendering: true,
+                windowHeight: contentHeight
+            },
+            jsPDF: {
+                unit: "mm",
+                format: [pdfWidth, pdfHeight],
+                orientation: "portrait",
+                compress: true
+            },
+            pagebreak: { mode: 'avoid-all' }
+        };
+
+        await html2pdf().set(opt).from(clone).save();
+
+        document.body.removeChild(container);
+        document.querySelectorAll('.export-menu').forEach(menu => menu.classList.remove('active'));
+        showNotification("PDF exported successfully!", "success");
+    } catch (error) {
+        console.error("Error exporting PDF", error);
+        showNotification("Error exporting PDF. Please try again.", "error");
+    }
 }
 
+
 async function exportAsDOCX() {
-  try {
-    const resumeElement = document.getElementById('resumePreview');
-    const data = collectData();
-    const fileName = data.fullName.replace(/\s/g, "_") + "_Resume.docx";
-    // Compose HTML for DOCX
-    const htmlContent = "<!DOCTYPE html><html><head>...</head><body>" + resumeElement.outerHTML + "</body></html>";
-    const converted = await htmlDocx.asBlob(htmlContent); // async conversion
-    const url = URL.createObjectURL(converted);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    document.querySelectorAll('.export-menu').forEach(menu => menu.classList.remove('active'));
-    showNotification("DOCX exported successfully!", "success");
-  } catch (error) {
-    console.error("Error exporting DOCX", error);
-    showNotification("Error exporting DOCX. Please try again.", "error");
-  }
+    try {
+        const resumeElement = document.getElementById('resumePreview');
+        const data = collectData();
+        const fileName = data.fullName.replace(/\s/g, "_") + "_Resume.docx";
+        // Compose HTML for DOCX
+        const htmlContent = "<!DOCTYPE html><html><head>...</head><body>" + resumeElement.outerHTML + "</body></html>";
+        const converted = await htmlDocx.asBlob(htmlContent); // async conversion
+        const url = URL.createObjectURL(converted);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        document.querySelectorAll('.export-menu').forEach(menu => menu.classList.remove('active'));
+        showNotification("DOCX exported successfully!", "success");
+    } catch (error) {
+        console.error("Error exporting DOCX", error);
+        showNotification("Error exporting DOCX. Please try again.", "error");
+    }
 }
 
 function clearData() {
@@ -2866,4 +2924,40 @@ function updateItemHeader(itemId) {
             headerText.textContent = `Custom Section ${num}`;
         }
     }
+}
+// Add this function after window.addEventListener('DOMContentLoaded', ...)
+function scaleSidebarPreview() {
+    const thumbnail = document.querySelector('.preview-thumbnail');
+    const content = document.querySelector('.preview-content');
+
+    if (!thumbnail || !content) return;
+
+    const thumbnailWidth = thumbnail.offsetWidth;
+    const contentWidth = 850; // Fixed resume width
+    const scale = thumbnailWidth / contentWidth;
+
+    content.style.transform = `scale(${scale})`;
+
+    // Adjust height to maintain aspect ratio
+    const scaledHeight = 1100 * scale;
+    thumbnail.style.height = `${scaledHeight}px`;
+}
+
+// Call on load and resize
+window.addEventListener('DOMContentLoaded', () => {
+    loadFromLocalStorage();
+    updatePreview();
+    scaleSidebarPreview();
+});
+
+window.addEventListener('resize', scaleSidebarPreview);
+
+// Update the updatePreview function to include scaling
+function updatePreview() {
+    const data = collectData();
+    renderResume(document.getElementById('resumePreview'), currentTemplate, data, currentFont);
+    renderResume(document.getElementById('sidebarPreview'), currentTemplate, data, currentFont);
+
+    // Scale sidebar preview after render
+    setTimeout(scaleSidebarPreview, 100);
 }
