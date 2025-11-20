@@ -1445,3 +1445,122 @@ textarea {
         margin: -8px;
     }
 }
+
+.main-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px;
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 40px;
+  align-items: start;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .main-container {
+    grid-template-columns: 1fr;
+    padding: 20px;
+    gap: 20px;
+  }
+  .sidebar-preview {
+    position: static; /* Remove sticky for mobile */
+    margin-top: 24px;
+  }
+}
+
+@media (max-width: 600px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .form-inner {
+    padding: 24px 10px;
+  }
+  .app-header {
+    padding: 12px 12px;
+  }
+}
+
+img, .profile-pic, .photo-preview img {
+  max-width: 100%;
+  height: auto;
+}
+
+.btn,
+.btn-add,
+.btn-primary {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 16px;
+}
+
+.header-content, .additional-links, .skills-tags-container {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  body {
+    font-size: 15px;
+  }
+  .resume-wrapper,
+  .preview-card {
+    padding: 10px;
+    box-shadow: none;
+    max-width: 99vw;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar-preview {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Hide text labels for Preview and Export buttons, show only SVG icons */
+  .header-actions .btn,
+  .header-actions .btn-primary {
+    font-size: 0; /* hides text label */
+    width: 40px;
+    min-width: 40px;
+    padding: 6px;
+    justify-content: center;
+  }
+  
+  .header-actions .btn svg,
+  .header-actions .btn-primary svg {
+    font-size: initial; /* restore SVG size */
+    margin: 0;
+  }
+  
+  /* Keep export-option text visible (Export as PDF, Export as DOC) */
+  .export-option {
+    font-size: 14px; /* normal readable size */
+    width: 100%;
+    padding: 10px 12px;
+    justify-content: flex-start;
+    text-align: left;
+  }
+  
+  .export-option svg {
+    margin-right: 8px;
+  }
+  
+  /* Keep Clear All button text visible */
+  .header-actions .btn-text {
+    font-size: 14px;
+    width: auto;
+  }
+  
+  /* Ensure export menu dropdown appears properly */
+  .export-menu {
+    position: absolute;
+    right: 0;
+    min-width: 200px;
+  }
+}
