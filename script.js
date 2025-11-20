@@ -6,13 +6,16 @@ let achievementCount = 0;
 let languageCount = 0;
 let customSectionCount = 0;
 let currentTemplate = 'executive';
-let currentColor = '#ec4899';
+let currentColor = '#323232ff';
 let currentFont = "'Inter', sans-serif";
 let skillsArray = [];
 let activeLinkFields = new Set();
 let draggedElement = null;
+let type = null;
 // Update the global counter to the highest number
-const maxNum = items.length;
+const myItems = document.querySelectorAll('.repeatable-item');
+const maxNum = myItems.length;
+
 if (type === 'experience') experienceCount = maxNum;
 else if (type === 'education') educationCount = maxNum;
 // ... etc for other types
@@ -235,48 +238,45 @@ function loadDummyData() {
     function renumberItems(containerId, prefix) {
         const container = document.getElementById(containerId);
         if (!container) return;
-
         const items = container.querySelectorAll('.repeatable-item');
         items.forEach((item, index) => {
             const number = index + 1;
             const oldId = item.id;
-            const type = oldId.split('-')[0];
+            const type = oldId.split('-')[0]; // <---- This initializes type locally
             const newId = `${type}-${number}`;
-
-            // Update item ID
             item.id = newId;
 
-            // Update header number if it's still default
+            // Update header text and other IDs
             const headerText = item.querySelector('.item-number');
-            if (headerText && headerText.textContent.startsWith(prefix)) {
-                if (headerText.textContent === `${prefix} ${index + 2}` || headerText.textContent === `${prefix} ${index}`) {
-                    headerText.textContent = `${prefix} ${number}`;
-                }
+            if (headerText) {
+                // More robust header logic here...
+                headerText.textContent = `${prefix} ${number}`;
             }
 
-            // Update data-id attributes
+            // Update data-id attributes for all inner fields
             item.querySelectorAll('[data-id]').forEach(el => {
                 el.setAttribute('data-id', number);
             });
 
-            // Update delete button onclick
-            const deleteBtn = item.querySelector('.btn-icon-delete');
-            if (deleteBtn) {
-                deleteBtn.setAttribute('onclick', `event.stopPropagation(); removeSection('${newId}')`);
-            }
-
-            // Update checkbox IDs
+            // Update checkbox and label IDs (if present)
             const checkbox = item.querySelector('input[type="checkbox"]');
             if (checkbox) {
-                const checkboxId = `${type === 'experience' ? 'current' : 'check'}-${number}`;
+                const checkboxId = `${type}-current-${number}`;
                 checkbox.id = checkboxId;
-                const label = item.querySelector(`label[for^="${type === 'experience' ? 'current' : 'check'}"]`);
+                const label = item.querySelector(`label[for*="${type}-current"]`);
                 if (label) {
                     label.setAttribute('for', checkboxId);
                 }
             }
+
+            // Update the delete button
+            const deleteBtn = item.querySelector('.btn-icon-delete');
+            if (deleteBtn) {
+                deleteBtn.setAttribute('onclick', `event.stopPropagation(); removeSection('${newId}')`);
+            }
         });
     }
+
 
     function addEducation() {
         educationCount++;
@@ -612,7 +612,8 @@ function loadDummyData() {
     updatePreview();
 }
 
-// Handle profile picture upload
+document.getElementById('profilePic').addEventListener('change', handleProfilePicture);
+
 function handleProfilePicture(event) {
     const file = event.target.files[0];
     if (file) {
@@ -620,7 +621,6 @@ function handleProfilePicture(event) {
             showNotification('Image size must be less than 5MB', 'error');
             return;
         }
-
         const reader = new FileReader();
         reader.onload = function (e) {
             const base64 = e.target.result;
@@ -634,6 +634,16 @@ function handleProfilePicture(event) {
         reader.readAsDataURL(file);
     }
 }
+
+// Load profile picture on page load
+window.addEventListener('DOMContentLoaded', function () {
+    const savedImage = localStorage.getItem('profilePicture');
+    if (savedImage) {
+        const preview = document.getElementById('photoPreview');
+        preview.innerHTML = `<img src="${savedImage}" alt="Profile">`;
+        updatePreview();
+    }
+});
 
 // Character count for summary
 function updateCharCount() {
@@ -953,81 +963,81 @@ function collectData() {
 function makeDraggable(element) {
     const dragHandle = element.querySelector('.drag-handle');
     if (!dragHandle) return;
-    
+
     let isDragging = false;
     let startY = 0;
     let currentY = 0;
-    
+
     // ========== MOUSE EVENTS ==========
-    
-    dragHandle.addEventListener('mousedown', function(e) {
+
+    dragHandle.addEventListener('mousedown', function (e) {
         isDragging = true;
         draggedElement = element;
         element.classList.add('dragging');
         startY = e.clientY;
         e.preventDefault();
     });
-    
-    document.addEventListener('mousemove', function(e) {
+
+    document.addEventListener('mousemove', function (e) {
         if (!isDragging || !draggedElement) return;
-        
+
         currentY = e.clientY;
         const container = draggedElement.parentElement;
         const afterElement = getDragAfterElement(container, currentY);
-        
+
         if (afterElement == null) {
             container.appendChild(draggedElement);
         } else {
             container.insertBefore(draggedElement, afterElement);
         }
     });
-    
-    document.addEventListener('mouseup', function(e) {
+
+    document.addEventListener('mouseup', function (e) {
         if (isDragging && draggedElement) {
             finalizeDrag();
         }
     });
-    
+
     // ========== TOUCH EVENTS (mobile/tablets) ==========
-    
-    dragHandle.addEventListener('touchstart', function(e) {
+
+    dragHandle.addEventListener('touchstart', function (e) {
         isDragging = true;
         draggedElement = element;
         element.classList.add('dragging');
         startY = e.touches[0].clientY;
         e.preventDefault();
     }, { passive: false });
-    
-    document.addEventListener('touchmove', function(e) {
+
+    document.addEventListener('touchmove', function (e) {
         if (!isDragging || !draggedElement) return;
-        
+
         currentY = e.touches[0].clientY;
         const container = draggedElement.parentElement;
         const afterElement = getDragAfterElement(container, currentY);
-        
+
         if (afterElement == null) {
             container.appendChild(draggedElement);
         } else {
             container.insertBefore(draggedElement, afterElement);
         }
-        
+
         e.preventDefault();
     }, { passive: false });
-    
-    document.addEventListener('touchend', function(e) {
+
+    document.addEventListener('touchend', function (e) {
         if (isDragging && draggedElement) {
             finalizeDrag();
         }
     });
-    
+
     // ========== CLEANUP FUNCTION ==========
-    
+
     function finalizeDrag() {
         draggedElement.classList.remove('dragging');
-        
+
         const container = draggedElement.parentElement;
         const containerId = container.id;
-        
+
         if (containerId === 'experienceContainer') {
             renumberItems('experienceContainer', 'Experience');
         } else if (containerId === 'educationContainer') {
@@ -1041,20 +1051,20 @@ function makeDraggable(element) {
         } else if (containerId === 'customSectionsContainer') {
             renumberItems('customSectionsContainer', 'Custom Section');
         }
-        
+
         saveToLocalStorage();
         updatePreview();
-        
+
         draggedElement = null;
         isDragging = false;
     }
-    
+
     // Prevent inputs from triggering drag
     element.querySelectorAll('input, textarea, select, button').forEach(input => {
-        input.addEventListener('mousedown', function(e) {
+        input.addEventListener('mousedown', function (e) {
             e.stopPropagation();
         });
-        input.addEventListener('touchstart', function(e) {
+        input.addEventListener('touchstart', function (e) {
             e.stopPropagation();
         }, { passive: true });
     });
@@ -1256,7 +1266,7 @@ function addEducation() {
         });
     });
 
-    renumberItems('educationContainer', 'Education');   
+    renumberItems('educationContainer', 'Education');
 }
 
 
