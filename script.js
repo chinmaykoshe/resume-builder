@@ -2782,36 +2782,55 @@ async function exportAsPDF() {
     }
 }
 
-
-async function exportAsDOCX() {
-    try {
-        const resumeElement = document.getElementById('resumePreview');
-        const data = collectData();
-        const fileName = data.fullName.replace(/\s/g, "_") + "_Resume.docx";
-        // Compose HTML for DOCX
-        const htmlContent = "<!DOCTYPE html><html><head>...</head><body>" + resumeElement.outerHTML + "</body></html>";
-        const converted = await htmlDocx.asBlob(htmlContent); // async conversion
-        const url = URL.createObjectURL(converted);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        document.querySelectorAll('.export-menu').forEach(menu => menu.classList.remove('active'));
-        showNotification("DOCX exported successfully!", "success");
-    } catch (error) {
-        console.error("Error exporting DOCX", error);
-        showNotification("Error exporting DOCX. Please try again.", "error");
-    }
-}
-
 function clearData() {
-    if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
-        localStorage.clear();
-        location.reload();
-    }
+  if (!confirm('Are you sure you want to clear ALL data? This cannot be undone.')) return;
+  
+  // 1. Clear ALL localStorage items (not just resumeData)
+  localStorage.clear();
+  
+  // 2. Reset ALL global variables
+  experienceCount = 0;
+  educationCount = 0;
+  projectCount = 0;
+  achievementCount = 0;
+  languageCount = 0;
+  customSectionCount = 0;
+  skillsArray = [];
+  activeLinkFields = new Set();
+  currentTemplate = 'executive';
+  currentColor = '#323232ff';
+  currentFont = "'Inter', sans-serif";
+  
+  // 3. Clear ALL form fields manually
+  document.querySelectorAll('input, textarea, select').forEach(field => {
+    field.value = '';
+    field.checked = false;
+    if (field.type === 'checkbox') field.checked = false;
+  });
+  
+  // 4. Clear profile picture
+  document.getElementById('photoPreview').innerHTML = `
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+      <circle cx="12" cy="7" r="4"></circle>
+    </svg>
+  `;
+  
+  // 5. Clear ALL dynamic containers
+  ['experienceContainer', 'educationContainer', 'projectsContainer', 
+   'achievementsContainer', 'languagesContainer', 'customSectionsContainer',
+   'linkFieldsContainer', 'skillsTagsContainer'].forEach(containerId => {
+    document.getElementById(containerId).innerHTML = '';
+  });
+  
+  // 6. Reset character count
+  document.getElementById('summaryCount').textContent = '0';
+  
+  // 7. Force update preview
+  updatePreview();
+  
+  // 8. Show confirmation
+  showNotification('✅ All data cleared successfully!', 'success');
 }
 
 function showNotification(message, type = 'success') {
@@ -2961,3 +2980,24 @@ function updatePreview() {
     // Scale sidebar preview after render
     setTimeout(scaleSidebarPreview, 100);
 }
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const currentTheme = html.getAttribute('data-theme');
+  
+  if (currentTheme === 'dark') {
+    html.removeAttribute('data-theme');
+    localStorage.removeItem('theme');
+  } else {
+    html.setAttribute('data-theme', 'dark');
+    localStorage.setItem('theme', 'dark');
+  }
+}
+
+// Load saved theme on page load
+document.addEventListener('DOMContentLoaded', () => {
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+});
